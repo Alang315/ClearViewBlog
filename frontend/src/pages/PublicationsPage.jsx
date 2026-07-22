@@ -1,10 +1,11 @@
-import Navbar from "../components/Navbar";
-
-<Navbar/>
+import Sidebar from "../components/sidebar";
 
 export const PublicationsPage = () => {
     return (
-        <div>Publications</div>
+        <>
+            <Sidebar/>
+            <div>Publications</div>
+        </>
     )
 }
 
