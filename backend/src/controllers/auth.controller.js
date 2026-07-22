@@ -96,7 +96,7 @@ export const signup = async (req, res) => {
           NULL AS profilePic
         FROM users
         WHERE id = ?
-          AND archived = FALSE
+          AND archived = 0
         LIMIT 1
       `,
       [insertResult.insertId],
@@ -148,6 +148,7 @@ export const login = async (req, res) => {
           u.full_name AS fullName,
           u.email,
           u.password_hash AS passwordHash,
+          r.name AS role,
           NULL AS profilePic
         FROM users AS u
         INNER JOIN roles AS r

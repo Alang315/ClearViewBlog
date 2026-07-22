@@ -25,16 +25,8 @@ export const useAuthStore = create((set, get) => ({
     set({ isSigningUp: true });
     try {
       const res = await axiosInstance.post("/auth/signup", data);
-
-      const user = res.data.user ?? res.data;
-
       set({ authUser: res.data });
       toast.success("Account created successfully");
-
-      if (user.role === "admin") {
-        window.location.href = "/publications";
-      }
-
     } catch (error) {
       toast.error(error.response.data.message);
     } finally {
@@ -46,16 +38,9 @@ export const useAuthStore = create((set, get) => ({
     set({ isLoggingIn: true });
     try {
       const res = await axiosInstance.post("/auth/login", data);
-
-      const user = res.data.user ?? res.data;
-
       set({ authUser: res.data });
-      
       toast.success("Logged in successfully");
-            
-      if (user.role === "admin") {
-        window.location.href = "/publications";
-      }
+
     } catch (error) {
       toast.error(error.response.data.message);
     } finally {

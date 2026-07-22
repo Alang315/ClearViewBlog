@@ -3,6 +3,7 @@ export function serializeUser(user) {
     _id: user.id,
     fullName: user.fullName,
     email: user.email,
+    role: user.role ?? null,
     profilePic: user.profilePic ?? null,
   };
 }

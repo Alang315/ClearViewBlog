@@ -1,5 +1,7 @@
 import Navbar from "./components/Navbar";
 
+import CategoriesPage from "./pages/CategoriesPage";
+import PublicationsPage from "./pages/PublicationsPage";
 import HomePage from "./pages/HomePage";
 import SignUpPage from "./pages/SignUpPage";
 import LoginPage from "./pages/LoginPage";
@@ -31,9 +33,11 @@ const App = () => {
     <div>
 
       <Routes>
+        <Route path="/categories" element={authUser.role === "admin" ? <CategoriesPage /> : <Navigate to="/" />} />
+        <Route path="/publications" element={authUser.role === "admin" ? <PublicationsPage /> : <Navigate to="/" />} />
         <Route path="/" element={authUser ? <HomePage /> : <Navigate to="/login" />} />
         <Route path="/signup" element={authUser ? <SignUpPage /> : <Navigate to="/" />} />
-        <Route path="/login" element={authUser ? <LoginPage /> : <Navigate to="/" />} />
+        <Route path="/login" element={authUser? <LoginPage /> : <Navigate to="/" />} />
       </Routes>
 
       <Toaster />
