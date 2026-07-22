@@ -9,9 +9,11 @@ import { useCategoriesStore } from "../store/useCategoriesStore";
 import { usePublicationsStore } from "../store/usePublicationsStore";
 
 const PublicationsPage = () => {
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [sortOrder, setSortOrder] = useState("desc");
+  const [appliedSortOrder, setAppliedSortOrder] = useState("desc");
   const [page, setPage] = useState(1);
   const [isFilterApplied, setIsFilterApplied] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -25,6 +27,7 @@ const PublicationsPage = () => {
     publications,
     pagination,
     fetchPublications,
+    fetchPublication,
     createPublication,
     updatePublication,
     deletePublication,
@@ -38,12 +41,12 @@ const PublicationsPage = () => {
     () => ({
       page,
       limit: 10,
-      search: isFilterApplied ? search.trim() : undefined,
+      search: isFilterApplied && appliedSearch.trim() ? appliedSearch.trim() : undefined,
       category: isFilterApplied && categoryFilter ? categoryFilter : undefined,
       sortBy: "date",
-      sortOrder,
+      sortOrder: appliedSortOrder,
     }),
-    [page, search, categoryFilter, isFilterApplied, sortOrder],
+    [page, appliedSearch, categoryFilter, isFilterApplied, appliedSortOrder],
   );
 
   useEffect(() => {
@@ -71,13 +74,17 @@ const PublicationsPage = () => {
 
   const handleApplyFilters = () => {
     setPage(1);
+    setAppliedSearch(searchInput);
+    setAppliedSortOrder(sortOrder);
     setIsFilterApplied(true);
   };
 
   const handleClearFilters = () => {
-    setSearch("");
+    setSearchInput("");
+    setAppliedSearch("");
     setCategoryFilter("");
     setSortOrder("desc");
+    setAppliedSortOrder("desc");
     setPage(1);
     setIsFilterApplied(false);
   };
@@ -87,9 +94,14 @@ const PublicationsPage = () => {
     setModalOpen(true);
   };
 
-  const openEditModal = (publication) => {
-    setEditingPublication(publication);
-    setModalOpen(true);
+  const openEditModal = async (publication) => {
+    try {
+      const response = await fetchPublication(publication.id);
+      setEditingPublication(response.publication || response);
+      setModalOpen(true);
+    } catch (error) {
+      // keep current listing open; error handling is done in store
+    }
   };
 
   const closeModal = () => {
@@ -172,12 +184,13 @@ const PublicationsPage = () => {
               <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type="search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
                     event.preventDefault();
                     setPage(1);
+                    setAppliedSearch(searchInput);
                     setIsFilterApplied(true);
                   }
                 }}
@@ -291,22 +304,24 @@ const PublicationsPage = () => {
                         {publication.likesCount}
                       </td>
                       <td className="px-6 py-4 align-middle text-right">
-                        <button
-                          type="button"
-                          onClick={() => openEditModal(publication)}
-                          className="mr-2 inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
-                          aria-label={`Edit ${publication.title}`}
-                        >
-                          <Edit3 className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeleteTarget(publication)}
-                          className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
-                          aria-label={`Delete ${publication.title}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        <div className="inline-flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(publication)}
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
+                            aria-label={`Edit ${publication.title}`}
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteTarget(publication)}
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
+                            aria-label={`Delete ${publication.title}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))

@@ -78,6 +78,23 @@ const Sidebar = () => {
                 )}
               </NavLink>
             ))}
+
+            <NavLink
+              to="/"
+              className={getNavLinkClasses}
+            >
+              {({ isActive }) => (
+                <>
+                  {isActive && (
+                    <span className="absolute -left-3 top-1/2 h-9 w-1 -translate-y-1/2 rounded-r-full bg-[#b7cf62]" />
+                  )}
+
+                  <Leaf className="size-[18px] shrink-0" />
+
+                  <span>See your blog</span>
+                </>
+              )}
+            </NavLink>
           </div>
         </nav>
 

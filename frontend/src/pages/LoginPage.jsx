@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Eye,
   EyeOff,
@@ -21,6 +21,9 @@ const LoginPage = () => {
   });
 
   const { login, isLoggingIn } = useAuthStore();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from || "/";
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -34,9 +37,13 @@ const LoginPage = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    await login({
+    const user = await login({
       ...formData,
     });
+
+    if (user && user.role !== "admin") {
+      navigate(from, { replace: true });
+    }
   };
 
   return (

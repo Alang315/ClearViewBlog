@@ -41,15 +41,17 @@ export const useAuthStore = create((set, get) => ({
 
       const user = res.data.user ?? res.data;
 
-      set({ authUser: res.data });
-      
+      set({ authUser: user });
       toast.success("Logged in successfully");
-            
+
       if (user.role === "admin") {
         window.location.href = "/publications";
       }
+
+      return user;
     } catch (error) {
       toast.error(error.response.data.message);
+      return null;
     } finally {
       set({ isLoggingIn: false });
     }

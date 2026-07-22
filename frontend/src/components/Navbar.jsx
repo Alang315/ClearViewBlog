@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ChevronDown,
@@ -9,12 +9,27 @@ import {
 
 import { useAuthStore } from "../store/useAuthStore";
 
-const Navbar = () => {
+const Navbar = ({
+  showFilters = true,
+  categories = [],
+  defaultSearch = "",
+  defaultCategory = "",
+  onSearch,
+  onCategoryChange,
+}) => {
   const navigate = useNavigate();
   const { logout, authUser } = useAuthStore();
 
-  const [category, setCategory] = useState("");
-  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState(defaultCategory);
+  const [search, setSearch] = useState(defaultSearch);
+
+  useEffect(() => {
+    setCategory(defaultCategory);
+  }, [defaultCategory]);
+
+  useEffect(() => {
+    setSearch(defaultSearch);
+  }, [defaultSearch]);
 
   const handleSearch = (event) => {
     event.preventDefault();
@@ -27,6 +42,10 @@ const Navbar = () => {
 
     if (search.trim()) {
       params.set("search", search.trim());
+    }
+
+    if (typeof onSearch === "function") {
+      return onSearch({ category, search: search.trim() });
     }
 
     const query = params.toString();
@@ -56,34 +75,54 @@ const Navbar = () => {
           onSubmit={handleSearch}
           className="flex min-w-0 flex-1 items-center justify-end gap-3"
         >
-          <div className="relative hidden sm:block">
-            <select
-              value={category}
-              onChange={(event) => setCategory(event.target.value)}
-              className="h-11 min-w-[150px] appearance-none rounded-xl border border-slate-200 bg-white pl-4 pr-10 text-sm font-semibold text-[#0a3763] outline-none transition hover:border-slate-300 focus:border-[#0b4f88] focus:ring-4 focus:ring-[#0b4f88]/10"
-              aria-label="Filter by category"
-            >
-              <option value="">Category</option>
-              <option value="technology">Technology</option>
-              <option value="design">Design</option>
-              <option value="business">Business</option>
-              <option value="lifestyle">Lifestyle</option>
-            </select>
+          {showFilters && (
+            <div className="relative hidden sm:block">
+              <select
+                value={category}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setCategory(value);
+                  if (typeof onCategoryChange === "function") {
+                    onCategoryChange(value);
+                  }
+                }}
+                className="h-11 min-w-[150px] appearance-none rounded-xl border border-slate-200 bg-white pl-4 pr-10 text-sm font-semibold text-[#0a3763] outline-none transition hover:border-slate-300 focus:border-[#0b4f88] focus:ring-4 focus:ring-[#0b4f88]/10"
+                aria-label="Filter by category"
+              >
+                <option value="">Category</option>
+                {categories.length > 0 ? (
+                  categories.map((categoryItem) => (
+                    <option key={categoryItem.id} value={categoryItem.id}>
+                      {categoryItem.name}
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="technology">Technology</option>
+                    <option value="design">Design</option>
+                    <option value="business">Business</option>
+                    <option value="lifestyle">Lifestyle</option>
+                  </>
+                )}
+              </select>
 
-            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[#0a3763]" />
-          </div>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[#0a3763]" />
+            </div>
+          )}
 
-          <div className="relative min-w-0 max-w-sm flex-1">
-            <Search className="pointer-events-none absolute left-4 top-1/2 size-[18px] -translate-y-1/2 text-slate-500" />
+          {showFilters && (
+            <div className="relative min-w-0 max-w-sm flex-1">
+              <Search className="pointer-events-none absolute left-4 top-1/2 size-[18px] -translate-y-1/2 text-slate-500" />
 
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search posts..."
-              className="h-11 w-full rounded-xl border border-slate-200 bg-[#fbfcfe] pl-11 pr-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 hover:border-slate-300 focus:border-[#0b4f88] focus:bg-white focus:ring-4 focus:ring-[#0b4f88]/10"
-            />
-          </div>
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search posts..."
+                className="h-11 w-full rounded-xl border border-slate-200 bg-[#fbfcfe] pl-11 pr-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 hover:border-slate-300 focus:border-[#0b4f88] focus:bg-white focus:ring-4 focus:ring-[#0b4f88]/10"
+              />
+            </div>
+          )}
 
           <button
             type="submit"
@@ -95,6 +134,16 @@ const Navbar = () => {
           {/* Account actions */}
           {authUser && (
             <div className="flex shrink-0 items-center gap-2 border-l border-slate-200 pl-3">
+              {authUser.role === "admin" && (
+                <button
+                  type="button"
+                  onClick={() => navigate("/publications")}
+                  className="inline-flex h-11 items-center justify-center rounded-2xl bg-[#0b5592] px-4 text-sm font-semibold text-white transition hover:bg-[#073665]"
+                >
+                  Go to your dashboard
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={logout}

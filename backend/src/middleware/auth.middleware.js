@@ -85,6 +85,73 @@ export const protectRoute = async (req, res, next) => {
   }
 };
 
+export const optionalProtect = async (req, res, next) => {
+  try {
+    const token = req.cookies.jwt;
+
+    if (!token) {
+      return next();
+    }
+
+    if (!process.env.JWT_SECRET) {
+      throw new Error("JWT_SECRET is required");
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    if (
+      typeof decoded !== "object" ||
+      !decoded.userId
+    ) {
+      return next();
+    }
+
+    const [users] = await db.execute(
+      `
+        SELECT
+          u.id,
+          u.full_name AS fullName,
+          u.email,
+          r.name AS role
+        FROM users AS u
+        INNER JOIN roles AS r
+          ON r.id = u.role_id
+        WHERE u.id = ?
+          AND u.archived = FALSE
+          AND r.archived = FALSE
+        LIMIT 1
+      `,
+      [decoded.userId],
+    );
+
+    const user = users[0];
+
+    if (user) {
+      req.user = {
+        ...serializeUser(user),
+        role: user.role,
+      };
+    }
+
+    return next();
+  } catch (error) {
+    if (
+      error.name === "JsonWebTokenError" ||
+      error.name === "TokenExpiredError" ||
+      error.name === "NotBeforeError"
+    ) {
+      return next();
+    }
+
+    console.error(
+      "Error in optionalProtect middleware:",
+      error,
+    );
+
+    return next();
+  }
+};
+
 export const authorizeAdmin = (req, res, next) => {
   if (!req.user || req.user.role !== "admin") {
     return res.status(500).json({ message: "Forbidden - Admin access required" });

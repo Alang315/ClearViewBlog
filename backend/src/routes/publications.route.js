@@ -6,14 +6,14 @@ import {
   updatePublication,
   deletePublication,
 } from "../controllers/publications.controller.js";
-import { protectRoute, authorizeAdmin } from "../middleware/auth.middleware.js";
+import { protectRoute, optionalProtect, authorizeAdmin } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
+router.get("/", optionalProtect, getPublications);
+router.get("/:id", protectRoute, getPublicationById);
 router.use(protectRoute, authorizeAdmin);
 
-router.get("/", getPublications);
-router.get("/:id", getPublicationById);
 router.post("/", createPublication);
 router.put("/:id", updatePublication);
 router.delete("/:id", deletePublication);

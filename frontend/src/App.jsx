@@ -1,8 +1,7 @@
-import Navbar from "./components/Navbar";
-
 import CategoriesPage from "./pages/CategoriesPage";
 import PublicationsPage from "./pages/PublicationsPage";
 import HomePage from "./pages/HomePage";
+import DetailPublicationPage from "./pages/detailPublicationPage";
 import SignUpPage from "./pages/SignUpPage";
 import LoginPage from "./pages/LoginPage";
 
@@ -35,9 +34,10 @@ const App = () => {
       <Routes>
         <Route path="/categories" element={authUser?.role === "admin" ? <CategoriesPage /> : <Navigate to="/" />} />
         <Route path="/publications" element={authUser?.role === "admin" ? <PublicationsPage /> : <Navigate to="/" />} />
-        <Route path="/" element={authUser ? <HomePage /> : <Navigate to="/login" />} />
+        <Route path="/posts/:id" element={<DetailPublicationPage />} />
+        <Route path="/" element={<HomePage />} />
         <Route path="/signup" element={!authUser ? <SignUpPage /> : <Navigate to="/" />} />
-        <Route path="/login" element={!authUser? <LoginPage /> : <Navigate to="/" />} />
+        <Route path="/login" element={!authUser ? <LoginPage /> : <Navigate to="/" />} />
       </Routes>
 
       <Toaster />

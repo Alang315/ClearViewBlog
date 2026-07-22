@@ -28,6 +28,25 @@ export const usePublicationsStore = create((set) => ({
     }
   },
 
+  fetchPublication: async (id) => {
+    try {
+      const response = await axiosInstance.get(`/publications/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  likePublication: async (postId) => {
+    const response = await axiosInstance.post(`/likes/${postId}`);
+    return response.data;
+  },
+
+  unlikePublication: async (postId) => {
+    const response = await axiosInstance.delete(`/likes/${postId}`);
+    return response.data;
+  },
+
   createPublication: async (payload) => {
     try {
       const response = await axiosInstance.post("/publications", payload);

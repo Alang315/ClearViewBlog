@@ -115,6 +115,84 @@ const getPostCategories = async (postIds) => {
   }, {});
 };
 
+const getRelatedPosts = async (publicationId, categoryIds, userId) => {
+  if (!categoryIds.length) {
+    return [];
+  }
+
+  const userLikeJoin = userId
+    ? `
+      LEFT JOIN post_likes AS ul
+        ON ul.post_id = p.id
+        AND ul.user_id = ?
+        AND ul.archived = FALSE
+    `
+    : "";
+
+  const userLikeSelect = userId
+    ? "MAX(ul.id) IS NOT NULL AS liked_by_current_user"
+    : "FALSE AS liked_by_current_user";
+
+  const params = userId ? [userId, publicationId, publicationId] : [publicationId, publicationId];
+
+  const [rows] = await db.execute(
+    `
+      SELECT
+        p.id,
+        p.title,
+        p.excerpt,
+        p.featured_image_url,
+        p.created_at,
+        p.updated_at,
+        u.full_name AS author,
+        COUNT(DISTINCT pl.id) AS likes_count,
+        ${userLikeSelect},
+        COUNT(DISTINCT pc.category_id) AS shared_category_count
+      FROM post_categories AS current_pc
+      INNER JOIN categories AS c_current
+        ON c_current.id = current_pc.category_id
+        AND c_current.archived = FALSE
+      INNER JOIN post_categories AS pc
+        ON pc.category_id = current_pc.category_id
+        AND pc.archived = FALSE
+      INNER JOIN categories AS c_related
+        ON c_related.id = pc.category_id
+        AND c_related.archived = FALSE
+      INNER JOIN posts AS p
+        ON p.id = pc.post_id
+        AND p.archived = FALSE
+      INNER JOIN users AS u
+        ON u.id = p.author_id
+        AND u.archived = FALSE
+      LEFT JOIN post_likes AS pl
+        ON pl.post_id = p.id
+        AND pl.archived = FALSE
+      ${userLikeJoin}
+      WHERE current_pc.post_id = ?
+        AND current_pc.archived = FALSE
+        AND p.id != ?
+      GROUP BY p.id
+      ORDER BY shared_category_count DESC, p.created_at DESC, p.id ASC
+      LIMIT 4
+    `,
+    params,
+  );
+
+  if (!rows.length) {
+    return [];
+  }
+
+  const relatedIds = rows.map((row) => row.id);
+  const categoriesByPost = await getPostCategories(relatedIds);
+
+  return rows.map((publication) =>
+    serializePublication({
+      ...publication,
+      categories: categoriesByPost[publication.id] || [],
+    }),
+  );
+};
+
 const parseInteger = (value, fallback) => {
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
@@ -149,6 +227,8 @@ const getPublications = async (req, res) => {
   try {
     const filters = buildPublicationFilters(req.query);
     const offset = (filters.page - 1) * filters.limit;
+    const currentUserId = req.user?._id;
+    const includeUserLike = Boolean(currentUserId);
 
     const whereClauses = ["p.archived = FALSE"];
     const params = [];
@@ -184,18 +264,33 @@ const getPublications = async (req, res) => {
     };
     const sortColumn = sortMap[filters.sortBy] || "p.created_at";
 
+    const userLikeJoin = includeUserLike
+      ? `
+      LEFT JOIN post_likes AS ul
+        ON ul.post_id = p.id
+        AND ul.user_id = ?
+        AND ul.archived = FALSE
+    `
+      : "";
+
+    const userLikeSelect = includeUserLike
+      ? "MAX(ul.id) IS NOT NULL AS liked_by_current_user"
+      : "FALSE AS liked_by_current_user";
+
+    const queryParams = includeUserLike ? [currentUserId, ...params] : [...params];
+
     const [posts] = await db.execute(
       `
       SELECT
         p.id,
         p.title,
         p.excerpt,
-        p.content,
         p.featured_image_url,
         p.created_at,
         p.updated_at,
         u.full_name AS author,
-        COUNT(DISTINCT pl.id) AS likes_count
+        COUNT(DISTINCT pl.id) AS likes_count,
+        ${userLikeSelect}
       FROM posts AS p
       INNER JOIN users AS u
         ON u.id = p.author_id
@@ -203,13 +298,14 @@ const getPublications = async (req, res) => {
       LEFT JOIN post_likes AS pl
         ON pl.post_id = p.id
         AND pl.archived = FALSE
+      ${userLikeJoin}
       ${whereSql}
       GROUP BY p.id
       ORDER BY ${sortColumn} ${filters.sortOrder.toUpperCase()}
       LIMIT ?
       OFFSET ?
     `,
-      [...params, filters.limit, offset],
+      [...queryParams, filters.limit, offset],
     );
 
     const postIds = posts.map((post) => post.id);
@@ -245,6 +341,24 @@ const getPublicationById = async (req, res) => {
       return res.status(400).json({ message: "Publication ID must be a positive number" });
     }
 
+    const currentUserId = req.user?._id;
+    const includeUserLike = Boolean(currentUserId);
+
+    const userLikeJoin = includeUserLike
+      ? `
+      LEFT JOIN post_likes AS ul
+        ON ul.post_id = p.id
+        AND ul.user_id = ?
+        AND ul.archived = FALSE
+    `
+      : "";
+
+    const userLikeSelect = includeUserLike
+      ? "MAX(ul.id) IS NOT NULL AS liked_by_current_user"
+      : "FALSE AS liked_by_current_user";
+
+    const queryParams = includeUserLike ? [currentUserId, publicationId] : [publicationId];
+
     const [rows] = await db.execute(
       `
       SELECT
@@ -256,7 +370,8 @@ const getPublicationById = async (req, res) => {
         p.created_at,
         p.updated_at,
         u.full_name AS author,
-        COUNT(DISTINCT pl.id) AS likes_count
+        COUNT(DISTINCT pl.id) AS likes_count,
+        ${userLikeSelect}
       FROM posts AS p
       INNER JOIN users AS u
         ON u.id = p.author_id
@@ -264,11 +379,12 @@ const getPublicationById = async (req, res) => {
       LEFT JOIN post_likes AS pl
         ON pl.post_id = p.id
         AND pl.archived = FALSE
+      ${userLikeJoin}
       WHERE p.id = ?
         AND p.archived = FALSE
       GROUP BY p.id
     `,
-      [publicationId],
+      queryParams,
     );
 
     const publication = rows[0];
@@ -278,12 +394,15 @@ const getPublicationById = async (req, res) => {
     }
 
     const categoriesByPost = await getPostCategories([publication.id]);
+    const categories = categoriesByPost[publication.id] || [];
+    const relatedPosts = await getRelatedPosts(publication.id, categories.map((category) => category.id), currentUserId);
 
     return res.status(200).json({
       publication: serializePublication({
         ...publication,
-        categories: categoriesByPost[publication.id] || [],
-      }),
+        categories,
+      }, { includeContent: true }),
+      relatedPosts,
     });
   } catch (error) {
     console.error("Error fetching publication by ID:", error);

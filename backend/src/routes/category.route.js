@@ -10,10 +10,10 @@ import { protectRoute, authorizeAdmin } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-router.use(protectRoute, authorizeAdmin);
-
 router.get("/", getCategories);
 router.get("/:id", getCategoryById);
+router.use(protectRoute, authorizeAdmin);
+
 router.post("/", createCategory);
 router.put("/:id", updateCategory);
 router.delete("/:id", deleteCategory);
