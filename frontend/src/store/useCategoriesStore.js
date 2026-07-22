@@ -2,60 +2,64 @@ import { create } from "zustand";
 import { axiosInstance } from "../lib/axios.js";
 import toast from "react-hot-toast";
 
-export const useAuthStore = create((set, get) => ({
-  authUser: null,
-  isSigningUp: false,
-  isLoggingIn: false,
-  isCheckingAuth: true,
+export const useCategoriesStore = create((set) => ({
+  categories: [],
+  pagination: null,
+  isLoading: false,
+  error: null,
 
-  checkAuth: async () => {
+  fetchCategories: async (params = {}) => {
+    set({ isLoading: true, error: null });
+
     try {
-      const res = await axiosInstance.get("/auth/check");
-
-      set({ authUser: res.data });
+      const response = await axiosInstance.get("/categories", { params });
+      set({
+        categories: response.data.categories,
+        pagination: response.data.pagination,
+      });
+      return response.data;
     } catch (error) {
-      console.log("Error in checkAuth:", error);
-      set({ authUser: null });
+      const message = error?.response?.data?.message || "Failed to load categories.";
+      set({ error: message });
+      toast.error(message);
+      throw error;
     } finally {
-      set({ isCheckingAuth: false });
+      set({ isLoading: false });
     }
   },
 
-  signup: async (data) => {
-    set({ isSigningUp: true });
+  createCategory: async (payload) => {
     try {
-      const res = await axiosInstance.post("/auth/signup", data);
-      set({ authUser: res.data });
-      toast.success("Account created successfully");
+      const response = await axiosInstance.post("/categories", payload);
+      toast.success("Category created successfully");
+      return response.data.category;
     } catch (error) {
-      toast.error(error.response.data.message);
-    } finally {
-      set({ isSigningUp: false });
+      const message = error?.response?.data?.message || "Failed to create category.";
+      toast.error(message);
+      throw error;
     }
   },
 
-  login: async (data) => {
-    set({ isLoggingIn: true });
+  updateCategory: async (id, payload) => {
     try {
-      const res = await axiosInstance.post("/auth/login", data);
-      set({ authUser: res.data });
-      toast.success("Logged in successfully");
-
+      const response = await axiosInstance.put(`/categories/${id}`, payload);
+      toast.success("Category updated successfully");
+      return response.data.category;
     } catch (error) {
-      toast.error(error.response.data.message);
-    } finally {
-      set({ isLoggingIn: false });
+      const message = error?.response?.data?.message || "Failed to update category.";
+      toast.error(message);
+      throw error;
     }
   },
 
-  logout: async () => {
+  deleteCategory: async (id) => {
     try {
-      await axiosInstance.post("/auth/logout");
-      set({ authUser: null });
-      toast.success("Logged out successfully");
+      await axiosInstance.delete(`/categories/${id}`);
+      toast.success("Category deleted successfully");
     } catch (error) {
-      toast.error(error.response.data.message);
+      const message = error?.response?.data?.message || "Failed to delete category.";
+      toast.error(message);
+      throw error;
     }
   },
-
 }));

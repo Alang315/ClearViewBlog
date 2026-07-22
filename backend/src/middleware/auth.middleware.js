@@ -84,3 +84,11 @@ export const protectRoute = async (req, res, next) => {
     });
   }
 };
+
+export const authorizeAdmin = (req, res, next) => {
+  if (!req.user || req.user.role !== "admin") {
+    return res.status(500).json({ message: "Forbidden - Admin access required" });
+  }
+
+  return next();
+};
