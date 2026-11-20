@@ -27,5 +27,8 @@
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "mysql2": "^3.23.1"
+  },
+  "overrides": {
+    "effect": "3.22.1"
   }
 }
